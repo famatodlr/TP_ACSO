@@ -1,16 +1,74 @@
 #include "ej1.h"
 
 string_proc_list* string_proc_list_create(void){
+	string_proc_list* list = malloc(sizeof(string_proc_list));
+
+    if (!list){
+		free(list);
+		return NULL;
+	}
+
+    list->first = NULL;
+    list->last = NULL;
+    return list;
 }
 
 string_proc_node* string_proc_node_create(uint8_t type, char* hash){
+	string_proc_node* node = malloc(sizeof(string_proc_node));
+
+    if (!node){ 
+		free(node);
+		return NULL;
+	}
+
+    node->type = type;
+    node->hash = strdup(hash);  // duplica el string (malloc + copy)
+    node->previous = NULL;
+    node->next = NULL;
+    return node;
 }
 
 void string_proc_list_add_node(string_proc_list* list, uint8_t type, char* hash){
+	if (!list) return;
+
+    string_proc_node* node = string_proc_node_create(type, hash);
+    if (!node) return;
+
+    if (!list->first) {
+        list->first = node;
+        list->last = node;
+    } else {
+        list->last->next = node;
+        node->previous = list->last;
+        list->last = node;
+    }
 }
 
 char* string_proc_list_concat(string_proc_list* list, uint8_t type , char* hash){
+	if (!list) return NULL;
+
+    // Primer paso: calcular el tamaño total necesario
+    size_t total_length = 0;
+    for (string_proc_node* current = list->first; current; current = current->next) {
+        if (current->type == type) {
+            total_length += strlen(current->hash);
+        }
+    }
+
+    // Crear el string concatenado
+    char* result = malloc(total_length + 1);  // +1 para el '\0'
+    if (!result) return NULL;
+    result[0] = '\0';  // inicializa como string vacío
+
+    for (string_proc_node* current = list->first; current; current = current->next) {
+        if (current->type == type) {
+            strcat(result, current->hash);
+        }
+    }
+
+    return result;
 }
+
 
 
 /** AUX FUNCTIONS **/
