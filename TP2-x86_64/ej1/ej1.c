@@ -1,4 +1,5 @@
 #include "ej1.h"
+#include "string.h"
 
 string_proc_list* string_proc_list_create(void){
 	string_proc_list* list = malloc(sizeof(string_proc_list));
@@ -22,7 +23,7 @@ string_proc_node* string_proc_node_create(uint8_t type, char* hash){
 	}
 
     node->type = type;
-    node->hash = hash;  // duplica el string (malloc + copy)
+    node->hash = strdup(hash);  // duplica el string (malloc + copy)
     node->previous = NULL;
     node->next = NULL;
     return node;
