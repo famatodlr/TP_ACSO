@@ -22,7 +22,7 @@ string_proc_node* string_proc_node_create(uint8_t type, char* hash){
 	}
 
     node->type = type;
-    node->hash = strcmp(hash);  // duplica el string (malloc + copy)
+    node->hash = hash;  // duplica el string (malloc + copy)
     node->previous = NULL;
     node->next = NULL;
     return node;
