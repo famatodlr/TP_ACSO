@@ -125,84 +125,74 @@ extern strlen
 extern strcat
 
 string_proc_list_concat_asm:
-    ; rdi = list
-    ; sil = type
+    ; Entrada: rdi = puntero a la lista, sil = type
+    ; Salida: rax = char* con string concatenado
 
-    test rdi, rdi
-    je .return_null
-
-    push rbx                   ; guardamos registros de uso
+    ; Guardamos los registros que vamos a usar
+    push rbx
     push r12
     push r13
 
-    mov r12, rdi               ; r12 = list
-    movzx r13, sil             ; r13 = tipo a buscar
-    xor rbx, rbx               ; rbx = total_length = 0
+    ; Paso 1: calcular total_length
+    xor r13, r13             ; r13 = total_length = 0
+    mov r12, [rdi]           ; r12 = current = list->first
 
-    ; === Loop para calcular total_length ===
-    mov rdi, [r12]             ; rdi = current = list->first
-.loop_count:
-    test rdi, rdi
-    je .alloc_result
+.loop_len:
+    test r12, r12
+    je .alloc_concat
 
-    mov al, [rdi]              ; current->type
-    cmp al, r13b
-    jne .next_count
+    mov al, [r12]            ; current->type
+    cmp al, sil
+    jne .next_len
 
-    mov rsi, [rdi + 8]         ; rsi = current->hash
-    mov rdi, rsi
+    mov rbx, [r12 + 8]       ; rbx = current->hash
     call strlen
-    add rbx, rax               ; total_length += strlen(current->hash)
+    add r13, rax
 
-.next_count:
-    mov rdi, [rdi + 24]        ; current = current->next
-    jmp .loop_count
+.next_len:
+    mov r12, [r12 + 24]      ; current = current->next
+    jmp .loop_len
 
-.alloc_result:
-    ; reservar total_length + 1
-    mov rdi, rbx
-    add rdi, 1
+.alloc_concat:
+    ; total_length está en r13
+    mov rdi, r13
+    add rdi, 1               ; +1 para el '\0'
     call malloc
     test rax, rax
-    je .fail
+    je .error
 
-    ; rax = result
-    mov r13, rax               ; r13 = result
-    mov byte [r13], 0          ; result[0] = '\0'
+    mov r13, rax             ; r13 = result string
+    mov byte [r13], 0        ; result[0] = '\0'
 
-    ; === Segundo loop para concatenar ===
-    mov rdi, [r12]             ; current = list->first
+    ; Paso 2: concatenar los strings
+    mov r12, [rdi]           ; r12 = current = list->first
+
 .loop_concat:
-    test rdi, rdi
+    test r12, r12
     je .done
 
-    mov al, [rdi]
+    mov al, [r12]            ; current->type
     cmp al, sil
     jne .next_concat
 
-    mov rsi, [rdi + 8]         ; current->hash
-    mov rdi, r13               ; rdi = result
-    call strcat
+    mov rsi, [r12 + 8]       ; rsi = current->hash
+    mov rdi, r13             ; rdi = result
+    call strcat              ; strcat(result, current->hash)
 
 .next_concat:
-    mov rdi, [rdi + 24]        ; current = current->next
+    mov r12, [r12 + 24]      ; current = current->next
     jmp .loop_concat
 
 .done:
-    mov rax, r13               ; return result
+    mov rax, r13             ; devolver result
     pop r13
     pop r12
     pop rbx
     ret
 
-.fail:
-    xor rax, rax
+.error:
+    xor rax, rax             ; devolver NULL en caso de error
     pop r13
     pop r12
     pop rbx
     ret
-
-.return_null:
-    xor rax, rax
-    ret
-
