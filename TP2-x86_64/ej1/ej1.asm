@@ -1,18 +1,9 @@
-extern malloc           ; Declaración externa de malloc
-extern strlen           ; Declaración externa de strlen
-extern strcat           ; Declaración externa de strcat
-
-section .data
-    size dq 16          ; Ejemplo de un tamaño para malloc
-
-section .text
-
 string_proc_list_create:
         push    rbp
         mov     rbp, rsp
         sub     rsp, 16
-        mov     edi, [size]     ; Usar un tamaño predefinido o el valor deseado
-        call    malloc          ; Llamada a malloc
+        mov     edi, 16
+        call    malloc
         mov     qword [rbp-8], rax
         cmp     qword [rbp-8], 0
         jne     .L2
@@ -27,14 +18,13 @@ string_proc_list_create:
 .L3:
         leave
         ret
-
 string_proc_node_create:
         push    rbp
         mov     rbp, rsp
         sub     rsp, 32
         mov     eax, edi
         mov     qword [rbp-32], rsi
-        mov     BYTE PTR [rbp-20], al
+        mov     byte [rbp-20], al
         mov     edi, 32
         call    malloc
         mov     qword [rbp-8], rax
@@ -51,13 +41,12 @@ string_proc_node_create:
         mov     rdx, qword [rbp-32]
         mov     qword [rax+24], rdx
         mov     rax, qword [rbp-8]
-        movzx   edx, BYTE PTR [rbp-20]
-        mov     BYTE PTR [rax+16], dl
+        movzx   edx, byte [rbp-20]
+        mov     byte [rax+16], dl
         mov     rax, qword [rbp-8]
 .L6:
         leave
         ret
-
 string_proc_list_add_node:
         push    rbp
         mov     rbp, rsp
@@ -65,10 +54,10 @@ string_proc_list_add_node:
         mov     qword [rbp-24], rdi
         mov     eax, esi
         mov     qword [rbp-40], rdx
-        mov     BYTE PTR [rbp-28], al
+        mov     byte [rbp-28], al
         cmp     qword [rbp-24], 0
         je      .L12
-        movzx   eax, BYTE PTR [rbp-28]
+        movzx   eax, byte [rbp-28]
         mov     rdx, qword [rbp-40]
         mov     rsi, rdx
         mov     edi, eax
@@ -108,7 +97,6 @@ string_proc_list_add_node:
 .L7:
         leave
         ret
-
 string_proc_list_concat:
         push    rbp
         mov     rbp, rsp
@@ -116,7 +104,7 @@ string_proc_list_concat:
         mov     qword [rbp-40], rdi
         mov     eax, esi
         mov     qword [rbp-56], rdx
-        mov     BYTE PTR [rbp-44], al
+        mov     byte [rbp-44], al
         cmp     qword [rbp-40], 0
         je      .L15
         cmp     qword [rbp-56], 0
@@ -135,8 +123,8 @@ string_proc_list_concat:
         jmp     .L18
 .L20:
         mov     rax, qword [rbp-16]
-        movzx   eax, BYTE PTR [rax+16]
-        cmp     BYTE PTR [rbp-44], al
+        movzx   eax, byte [rax+16]
+        cmp     byte [rbp-44], al
         jne     .L19
         mov     rax, qword [rbp-16]
         mov     rax, qword [rax+24]
@@ -165,7 +153,7 @@ string_proc_list_concat:
         jmp     .L17
 .L21:
         mov     rax, qword [rbp-24]
-        mov     BYTE PTR [rax], 0
+        mov     byte [rax], 0
         mov     rdx, qword [rbp-56]
         mov     rax, qword [rbp-24]
         mov     rsi, rdx
@@ -177,8 +165,8 @@ string_proc_list_concat:
         jmp     .L22
 .L24:
         mov     rax, qword [rbp-16]
-        movzx   eax, BYTE PTR [rax+16]
-        cmp     BYTE PTR [rbp-44], al
+        movzx   eax, byte [rax+16]
+        cmp     byte [rbp-44], al
         jne     .L23
         mov     rax, qword [rbp-16]
         mov     rax, qword [rax+24]
