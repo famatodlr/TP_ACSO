@@ -32,7 +32,7 @@ string_proc_list_create_asm:
 
 
 
-        
+
 string_proc_node_create_asm:
         push    rbp
         mov     rbp, rsp
@@ -81,7 +81,7 @@ string_proc_list_add_node_asm:
         mov     rdx, qword [rbp-40]
         mov     rsi, rdx
         mov     edi, eax
-        call    string_proc_node_create
+        call    string_proc_node_create_asm
         mov     qword [rbp-8], rax
         cmp     qword [rbp-8], 0
         je      .L13
