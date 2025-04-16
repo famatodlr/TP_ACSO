@@ -1,3 +1,7 @@
+extern malloc
+extern strlen
+extern strcat
+
 string_proc_list_create:
         push    rbp
         mov     rbp, rsp
