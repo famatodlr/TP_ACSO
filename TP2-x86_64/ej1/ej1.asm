@@ -1,173 +1,206 @@
-extern malloc
-extern strlen
-extern strcat
-
-global string_proc_list_create_asm
-global string_proc_node_create_asm
-global string_proc_list_add_node_asm
-global string_proc_list_concat_asm
 
 
-string_proc_list_create_asm:
-    push    rbp
-    mov     edi, 16              ; Tamanho de la lista
-    call    malloc
-    test    rax, rax
-    je      .fail                ; Si malloc falla, retorna NULL
-
-    mov     qword [rax], 0        ; first = NULL
-    mov     qword [rax+8], 0      ; last = NULL
-    pop     rbp
-    ret
-
-.fail:
-    xor     rax, rax
-    pop     rbp
-    ret
+string_proc_list_create:
+        push    rbp
+        mov     rbp, rsp
+        sub     rsp, 16
+        mov     edi, 16
+        call    malloc
+        mov     qword [rbp-8], rax
+        cmp     qword [rbp-8], 0
+        jne     .L2
+        mov     eax, 0
+        jmp     .L3
+.L2:
+        mov     rax, qword [rbp-8]
+        mov     qword [rax], 0
+        mov     rax, qword [rbp-8]
+        mov     qword [rax+8], 0
+        mov     rax, qword [rbp-8]
+.L3:
+        leave
+        ret
 
 
 
-
-string_proc_node_create_asm:
-    push    rbp
-    mov     r8b, dil             ; Guardar type (uint8_t) en r8b
-    mov     rdx, rsi             ; Guardar hash (char*) en rdx
-    mov     edi, 32              ; Tamanho para malloc
-    call    malloc
-    test    rax, rax
-    je      .fail                ; Si malloc falla, retorna NULL
-
-    mov     qword [rax], 0        ; prev = NULL
-    mov     qword [rax+8], 0      ; next = NULL
-    mov     byte [rax+16], r8b    ; type
-    mov     qword [rax+24], rdx   ; hash
-    pop     rbp
-    ret
-
-.fail:
-    xor     rax, rax
-    pop     rbp
-    ret
-
-
-
-
-
-string_proc_list_add_node_asm:
-    push    rbp
-    test    rdi, rdi             ; Si lista es NULL
-    je      .done
-
-    mov     rbx, rdi             ; Lista (primer nodo de la lista)
-    mov     dl, dl               ; type (uint8_t)
-    mov     rsi, rsi             ; hash (char*)
-
-    ; Llamar a string_proc_node_create_asm
-    mov     edi, edx             ; pasar type en edi
-    call    string_proc_node_create_asm
-    test    rax, rax             ; Verificar si malloc falló
-    je      .done
-
-    mov     rcx, [rbx]           ; lista->first
-    test    rcx, rcx
-    je      .empty_list          ; Si lista está vacía, ir a .empty_list
-
-    ; Si la lista no está vacía
-    mov     rdx, [rbx+8]         ; lista->last
-    test    rdx, rdx
-    je      .done_last_null
-    mov     [rdx], rax           ; last->next = nuevo nodo
-    mov     [rax+8], rdx         ; nuevo nodo->prev = last
-    mov     [rbx+8], rax         ; lista->last = nuevo nodo
-    jmp     .done
-
-.empty_list:
-    ; Caso cuando la lista está vacía
-    mov     [rbx], rax           ; lista->first = nuevo nodo
-    mov     [rbx+8], rax         ; lista->last = nuevo nodo
-    jmp     .done
-
-.done_last_null:
-    ; Si la lista tiene el puntero 'last' nulo, se asegura de que se actualice correctamente
-    mov     [rbx], rax           ; lista->first = nuevo nodo
-    mov     [rbx+8], rax         ; lista->last = nuevo nodo
-.done:
-    pop     rbp
-    ret
+string_proc_node_create:
+        push    rbp
+        mov     rbp, rsp
+        sub     rsp, 32
+        mov     eax, edi
+        mov     qword [rbp-32], rsi
+        mov     BYTE PTR [rbp-20], al
+        mov     edi, 32
+        call    malloc
+        mov     qword [rbp-8], rax
+        cmp     qword [rbp-8], 0
+        jne     .L5
+        mov     eax, 0
+        jmp     .L6
+.L5:
+        mov     rax, qword [rbp-8]
+        mov     qword [rax], 0
+        mov     rax, qword [rbp-8]
+        mov     qword [rax+8], 0
+        mov     rax, qword [rbp-8]
+        mov     rdx, qword [rbp-32]
+        mov     qword [rax+24], rdx
+        mov     rax, qword [rbp-8]
+        movzx   edx, BYTE PTR [rbp-20]
+        mov     BYTE PTR [rax+16], dl
+        mov     rax, qword [rbp-8]
+.L6:
+        leave
+        ret
 
 
 
-string_proc_list_concat_asm:
-    push    rbp
-    test    rdi, rdi             ; Si lista es NULL
-    je      .fail
-    test    rdx, rdx             ; Si hash es NULL
-    je      .fail
 
-    mov     r8, rdi              ; lista
-    mov     r9b, sil             ; type
-    mov     r10, rdx             ; hash base string
+string_proc_list_add_node:
+        push    rbp
+        mov     rbp, rsp
+        sub     rsp, 48
+        mov     qword [rbp-24], rdi
+        mov     eax, esi
+        mov     qword [rbp-40], rdx
+        mov     BYTE PTR [rbp-28], al
+        cmp     qword [rbp-24], 0
+        je      .L12
+        movzx   eax, BYTE PTR [rbp-28]
+        mov     rdx, qword [rbp-40]
+        mov     rsi, rdx
+        mov     edi, eax
+        call    string_proc_node_create
+        mov     qword [rbp-8], rax
+        cmp     qword [rbp-8], 0
+        je      .L13
+        mov     rax, qword [rbp-24]
+        mov     rax, qword [rax]
+        test    rax, rax
+        jne     .L11
+        mov     rax, qword [rbp-24]
+        mov     rdx, qword [rbp-8]
+        mov     qword [rax], rdx
+        mov     rax, qword [rbp-24]
+        mov     rdx, qword [rbp-8]
+        mov     qword [rax+8], rdx
+        jmp     .L7
+.L11:
+        mov     rax, qword [rbp-24]
+        mov     rax, qword [rax+8]
+        mov     rdx, qword [rbp-8]
+        mov     qword [rax], rdx
+        mov     rax, qword [rbp-24]
+        mov     rdx, qword [rax+8]
+        mov     rax, qword [rbp-8]
+        mov     qword [rax+8], rdx
+        mov     rax, qword [rbp-24]
+        mov     rdx, qword [rbp-8]
+        mov     qword [rax+8], rdx
+        jmp     .L7
+.L12:
+        nop
+        jmp     .L7
+.L13:
+        nop
+.L7:
+        leave
+        ret
 
-    ; Llamar a strlen para el hash base
-    mov     rdi, r10
-    call    strlen
-    mov     r11, rax
-    add     r11, 1               ; Asegurarse de dejar espacio para el terminador nulo
 
-    ; Calcular el tamaño total para la concatenación
-    mov     rbx, [r8]            ; list->first
-.loop_len:
-    test    rbx, rbx
-    je      .alloc_buffer
-    movzx   eax, byte [rbx+16]   ; tipo del nodo
-    cmp     al, r9b              ; compara tipo
-    jne     .next_node
-    mov     rdi, [rbx+24]        ; obtener el hash del nodo
-    test    rdi, rdi
-    je      .next_node
-    call    strlen
-    add     r11, rax
-.next_node:
-    mov     rbx, [rbx]           ; siguiente nodo
-    jmp     .loop_len
 
-.alloc_buffer:
-    mov     rdi, r11             ; Asignar espacio
-    call    malloc
-    test    rax, rax
-    je      .fail
-    mov     r12, rax
-    mov     byte [r12], 0        ; buffer[0] = '\0'
 
-    ; Concatenar el hash base
-    mov     rdi, r12
-    mov     rsi, r10
-    call    strcat
+string_proc_list_concat:
+        push    rbp
+        mov     rbp, rsp
+        sub     rsp, 64
+        mov     qword [rbp-40], rdi
+        mov     eax, esi
+        mov     qword [rbp-56], rdx
+        mov     BYTE PTR [rbp-44], al
+        cmp     qword [rbp-40], 0
+        je      .L15
+        cmp     qword [rbp-56], 0
+        jne     .L16
+.L15:
+        mov     eax, 0
+        jmp     .L17
+.L16:
+        mov     rax, qword [rbp-56]
+        mov     rdi, rax
+        call    strlen
+        mov     qword [rbp-8], rax
+        mov     rax, qword [rbp-40]
+        mov     rax, qword [rax]
+        mov     qword [rbp-16], rax
+        jmp     .L18
+.L20:
+        mov     rax, qword [rbp-16]
+        movzx   eax, BYTE PTR [rax+16]
+        cmp     BYTE PTR [rbp-44], al
+        jne     .L19
+        mov     rax, qword [rbp-16]
+        mov     rax, qword [rax+24]
+        test    rax, rax
+        je      .L19
+        mov     rax, qword [rbp-16]
+        mov     rax, qword [rax+24]
+        mov     rdi, rax
+        call    strlen
+        add     qword [rbp-8], rax
+.L19:
+        mov     rax, qword [rbp-16]
+        mov     rax, qword [rax]
+        mov     qword [rbp-16], rax
+.L18:
+        cmp     qword [rbp-16], 0
+        jne     .L20
+        mov     rax, qword [rbp-8]
+        add     rax, 1
+        mov     rdi, rax
+        call    malloc
+        mov     qword [rbp-24], rax
+        cmp     qword [rbp-24], 0
+        jne     .L21
+        mov     eax, 0
+        jmp     .L17
+.L21:
+        mov     rax, qword [rbp-24]
+        mov     BYTE PTR [rax], 0
+        mov     rdx, qword [rbp-56]
+        mov     rax, qword [rbp-24]
+        mov     rsi, rdx
+        mov     rdi, rax
+        call    strcat
+        mov     rax, qword [rbp-40]
+        mov     rax, qword [rax]
+        mov     qword [rbp-16], rax
+        jmp     .L22
+.L24:
+        mov     rax, qword [rbp-16]
+        movzx   eax, BYTE PTR [rax+16]
+        cmp     BYTE PTR [rbp-44], al
+        jne     .L23
+        mov     rax, qword [rbp-16]
+        mov     rax, qword [rax+24]
+        test    rax, rax
+        je      .L23
+        mov     rax, qword [rbp-16]
+        mov     rdx, qword [rax+24]
+        mov     rax, qword [rbp-24]
+        mov     rsi, rdx
+        mov     rdi, rax
+        call    strcat
+.L23:
+        mov     rax, qword [rbp-16]
+        mov     rax, qword [rax]
+        mov     qword [rbp-16], rax
+.L22:
+        cmp     qword [rbp-16], 0
+        jne     .L24
+        mov     rax, qword [rbp-24]
+.L17:
+        leave
+        ret
 
-    ; Concatenar los hashes de la lista
-    mov     rbx, [r8]
-.loop_cat:
-    test    rbx, rbx
-    je      .done
-    movzx   eax, byte [rbx+16]   ; obtener el tipo del nodo
-    cmp     al, r9b              ; comparar tipo
-    jne     .next_cat
-    mov     rsi, [rbx+24]        ; obtener el hash del nodo
-    test    rsi, rsi
-    je      .next_cat
-    mov     rdi, r12
-    call    strcat
-.next_cat:
-    mov     rbx, [rbx]           ; siguiente nodo
-    jmp     .loop_cat
-
-.done:
-    mov     rax, r12
-    pop     rbp
-    ret
-
-.fail:
-    xor     rax, rax
-    pop     rbp
-    ret
 
