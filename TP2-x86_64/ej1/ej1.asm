@@ -1,175 +1,206 @@
-section .text
-    global string_proc_list_create_asm
-    global string_proc_node_create_asm
-    global string_proc_list_add_node_asm
-    global string_proc_list_concat_asm
-    extern malloc
-    extern strlen
-    extern strcpy
-    extern strcat
+
+
 
 string_proc_list_create_asm:
-    mov rdi, 16              ; malloc(sizeof(string_proc_list))
-    call malloc              ; rax <- malloc result
+        push    rbp
+        mov     rbp, rsp
+        sub     rsp, 16
+        mov     edi, 16
+        call    malloc
+        mov     QWORD PTR [rbp-8], rax
+        cmp     QWORD PTR [rbp-8], 0
+        jne     .L2
+        mov     eax, 0
+        jmp     .L3
+.L2:
+        mov     rax, QWORD PTR [rbp-8]
+        mov     QWORD PTR [rax], 0
+        mov     rax, QWORD PTR [rbp-8]
+        mov     QWORD PTR [rax+8], 0
+        mov     rax, QWORD PTR [rbp-8]
+.L3:
+        leave
+        ret
 
-    test rax, rax            ; check NULL
-    je .return_null
 
-    mov qword [rax], 0       ; first = NULL
-    mov qword [rax + 8], 0   ; last = NULL
-    ret
 
-.return_null:
-    xor rax, rax
-    ret
 
 string_proc_node_create_asm:
-    ; Reservamos 32 bytes para el nodo
-    mov rdx, rsi         ; guardamos hash en rdx (segundo arg) para más tarde
-    movzx rcx, dil       ; extendemos type (uint8_t) en rcx
+        push    rbp
+        mov     rbp, rsp
+        sub     rsp, 32
+        mov     eax, edi
+        mov     QWORD PTR [rbp-32], rsi
+        mov     BYTE PTR [rbp-20], al
+        mov     edi, 32
+        call    malloc
+        mov     QWORD PTR [rbp-8], rax
+        cmp     QWORD PTR [rbp-8], 0
+        jne     .L5
+        mov     eax, 0
+        jmp     .L6
+.L5:
+        mov     rax, QWORD PTR [rbp-8]
+        mov     QWORD PTR [rax], 0
+        mov     rax, QWORD PTR [rbp-8]
+        mov     QWORD PTR [rax+8], 0
+        mov     rax, QWORD PTR [rbp-8]
+        mov     rdx, QWORD PTR [rbp-32]
+        mov     QWORD PTR [rax+24], rdx
+        mov     rax, QWORD PTR [rbp-8]
+        movzx   edx, BYTE PTR [rbp-20]
+        mov     BYTE PTR [rax+16], dl
+        mov     rax, QWORD PTR [rbp-8]
+.L6:
+        leave
+        ret
 
-    mov rdi, 32
-    call malloc          ; malloc(32), resultado en rax
 
-    test rax, rax
-    je .return_null      ; si malloc devolvió NULL, salimos
 
-    ; Inicializar node->next = NULL
-    mov qword [rax], 0
-
-    ; node->previous = NULL
-    mov qword [rax + 8], 0
-
-    ; node->type = type (rcx lo guarda)
-    mov byte [rax + 16], cl
-
-    ; node->hash = hash (rdx)
-    mov qword [rax + 24], rdx
-
-    ret
-
-.return_null:
-    xor rax, rax
-    ret
 
 string_proc_list_add_node_asm:
-    test rdi, rdi
-    je .end
+        push    rbp
+        mov     rbp, rsp
+        sub     rsp, 48
+        mov     QWORD PTR [rbp-24], rdi
+        mov     eax, esi
+        mov     QWORD PTR [rbp-40], rdx
+        mov     BYTE PTR [rbp-28], al
+        cmp     QWORD PTR [rbp-24], 0
+        je      .L12
+        movzx   eax, BYTE PTR [rbp-28]
+        mov     rdx, QWORD PTR [rbp-40]
+        mov     rsi, rdx
+        mov     edi, eax
+        call    string_proc_node_create
+        mov     QWORD PTR [rbp-8], rax
+        cmp     QWORD PTR [rbp-8], 0
+        je      .L13
+        mov     rax, QWORD PTR [rbp-24]
+        mov     rax, QWORD PTR [rax]
+        test    rax, rax
+        jne     .L11
+        mov     rax, QWORD PTR [rbp-24]
+        mov     rdx, QWORD PTR [rbp-8]
+        mov     QWORD PTR [rax], rdx
+        mov     rax, QWORD PTR [rbp-24]
+        mov     rdx, QWORD PTR [rbp-8]
+        mov     QWORD PTR [rax+8], rdx
+        jmp     .L7
+.L11:
+        mov     rax, QWORD PTR [rbp-24]
+        mov     rax, QWORD PTR [rax+8]
+        mov     rdx, QWORD PTR [rbp-8]
+        mov     QWORD PTR [rax], rdx
+        mov     rax, QWORD PTR [rbp-24]
+        mov     rdx, QWORD PTR [rax+8]
+        mov     rax, QWORD PTR [rbp-8]
+        mov     QWORD PTR [rax+8], rdx
+        mov     rax, QWORD PTR [rbp-24]
+        mov     rdx, QWORD PTR [rbp-8]
+        mov     QWORD PTR [rax+8], rdx
+        jmp     .L7
+.L12:
+        nop
+        jmp     .L7
+.L13:
+        nop
+.L7:
+        leave
+        ret
 
-    push rdi
-    movzx rsi, sil
-    call string_proc_node_create_asm
 
-    test rax, rax
-    je .restore_and_end
 
-    pop rdi
-    push rax
-
-    mov rcx, [rdi]
-    test rcx, rcx
-    jne .append_to_end
-
-    mov rcx, [rsp]
-    mov [rdi], rcx
-    mov [rdi + 8], rcx
-    jmp .done
-
-.append_to_end:
-    mov rcx, [rdi + 8]
-    mov rbx, [rsp]
-
-    mov [rcx], rbx
-    mov [rbx + 8], rcx
-    mov [rdi + 8], rbx
-
-.done:
-    add rsp, 8
-    ret
-
-.restore_and_end:
-    add rsp, 8
-.end:
-    ret
 
 string_proc_list_concat_asm:
-    push r12
-    mov r12, rdi
-    mov r13, rsi
-    mov r14, rdx
-
-    test r12, r12
-    jz .return_null_clean
-    test r14, r14
-    jz .return_null_clean
-
-    mov rdi, r14
-    call strlen
-    mov r8, rax
-
-    mov rbx, [r12]
-.len_loop:
-    test rbx, rbx
-    jz .len_done
-
-    movzx r9, byte [rbx + 8]
-    cmp r9, r13
-    jne .len_next
-
-    mov r10, [rbx + 16]
-    test r10, r10
-    jz .len_next
-    mov rdi, r10
-    call strlen
-    add r8, rax
-
-.len_next:
-    mov rbx, [rbx]
-    jmp .len_loop
-
-.len_done:
-    mov rdi, r8
-    inc rdi
-    call malloc
-    test rax, rax
-    jz .return_null_clean
-    mov r15, rax
-
-    mov byte [r15], 0
-
-    ; strcpy(result, hash)
-    mov rdi, r15      ; destino
-    mov rsi, r14      ; origen
-    call strcpy
-
-    mov rbx, [r12]
-.concat_loop:
-    test rbx, rbx
-    jz .concat_done
-
-    movzx r9, byte [rbx + 8]
-    cmp r9, r13
-    jne .concat_next
-
-    mov r10, [rbx + 16]
-    test r10, r10
-    jz .concat_next
-    mov rdi, r15      ; destino
-    mov rsi, r10      ; origen
-    call strcat
-
-.concat_next:
-    mov rbx, [rbx]
-    jmp .concat_loop
-
-.concat_done:
-    mov rax, r15
-    pop r12
-    ret
-
-.return_null_clean:
-    xor rax, rax
-    pop r12
-    ret
-
-    
+        push    rbp
+        mov     rbp, rsp
+        sub     rsp, 64
+        mov     QWORD PTR [rbp-40], rdi
+        mov     eax, esi
+        mov     QWORD PTR [rbp-56], rdx
+        mov     BYTE PTR [rbp-44], al
+        cmp     QWORD PTR [rbp-40], 0
+        je      .L15
+        cmp     QWORD PTR [rbp-56], 0
+        jne     .L16
+.L15:
+        mov     eax, 0
+        jmp     .L17
+.L16:
+        mov     rax, QWORD PTR [rbp-56]
+        mov     rdi, rax
+        call    strlen
+        mov     QWORD PTR [rbp-8], rax
+        mov     rax, QWORD PTR [rbp-40]
+        mov     rax, QWORD PTR [rax]
+        mov     QWORD PTR [rbp-16], rax
+        jmp     .L18
+.L20:
+        mov     rax, QWORD PTR [rbp-16]
+        movzx   eax, BYTE PTR [rax+16]
+        cmp     BYTE PTR [rbp-44], al
+        jne     .L19
+        mov     rax, QWORD PTR [rbp-16]
+        mov     rax, QWORD PTR [rax+24]
+        test    rax, rax
+        je      .L19
+        mov     rax, QWORD PTR [rbp-16]
+        mov     rax, QWORD PTR [rax+24]
+        mov     rdi, rax
+        call    strlen
+        add     QWORD PTR [rbp-8], rax
+.L19:
+        mov     rax, QWORD PTR [rbp-16]
+        mov     rax, QWORD PTR [rax]
+        mov     QWORD PTR [rbp-16], rax
+.L18:
+        cmp     QWORD PTR [rbp-16], 0
+        jne     .L20
+        mov     rax, QWORD PTR [rbp-8]
+        add     rax, 1
+        mov     rdi, rax
+        call    malloc
+        mov     QWORD PTR [rbp-24], rax
+        cmp     QWORD PTR [rbp-24], 0
+        jne     .L21
+        mov     eax, 0
+        jmp     .L17
+.L21:
+        mov     rax, QWORD PTR [rbp-24]
+        mov     BYTE PTR [rax], 0
+        mov     rdx, QWORD PTR [rbp-56]
+        mov     rax, QWORD PTR [rbp-24]
+        mov     rsi, rdx
+        mov     rdi, rax
+        call    strcat
+        mov     rax, QWORD PTR [rbp-40]
+        mov     rax, QWORD PTR [rax]
+        mov     QWORD PTR [rbp-16], rax
+        jmp     .L22
+.L24:
+        mov     rax, QWORD PTR [rbp-16]
+        movzx   eax, BYTE PTR [rax+16]
+        cmp     BYTE PTR [rbp-44], al
+        jne     .L23
+        mov     rax, QWORD PTR [rbp-16]
+        mov     rax, QWORD PTR [rax+24]
+        test    rax, rax
+        je      .L23
+        mov     rax, QWORD PTR [rbp-16]
+        mov     rdx, QWORD PTR [rax+24]
+        mov     rax, QWORD PTR [rbp-24]
+        mov     rsi, rdx
+        mov     rdi, rax
+        call    strcat
+.L23:
+        mov     rax, QWORD PTR [rbp-16]
+        mov     rax, QWORD PTR [rax]
+        mov     QWORD PTR [rbp-16], rax
+.L22:
+        cmp     QWORD PTR [rbp-16], 0
+        jne     .L24
+        mov     rax, QWORD PTR [rbp-24]
+.L17:
+        leave
+        ret
