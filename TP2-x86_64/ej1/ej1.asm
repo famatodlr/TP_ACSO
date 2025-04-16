@@ -1,4 +1,3 @@
-
 section .text
     global string_proc_list_create_asm
     global string_proc_node_create_asm
@@ -8,9 +7,6 @@ section .text
     extern strlen
     extern strcpy
     extern strcat
-
-
-
 
 string_proc_list_create_asm:
     mov rdi, 16              ; malloc(sizeof(string_proc_list))
@@ -26,9 +22,6 @@ string_proc_list_create_asm:
 .return_null:
     xor rax, rax
     ret
-
-
-
 
 string_proc_node_create_asm:
     ; Reservamos 32 bytes para el nodo
@@ -59,101 +52,71 @@ string_proc_node_create_asm:
     xor rax, rax
     ret
 
-
-
-
-
 string_proc_list_add_node_asm:
-    ; Si list es NULL, return
     test rdi, rdi
     je .end
 
-    ; Guardar args porque vamos a llamar a otra función
-    push rdi            ; save list
-    movzx rsi, sil      ; preparar segundo arg (type) para llamada
-                        ; ya tenemos rdx con hash
+    push rdi
+    movzx rsi, sil
     call string_proc_node_create_asm
 
-    ; Resultado está en rax → node
     test rax, rax
     je .restore_and_end
 
-    ; Restauramos list
-    pop rdi             ; rdi = list
-    push rax            ; guardamos node para después
+    pop rdi
+    push rax
 
-    ; Verificamos si list->first == NULL
-    mov rcx, [rdi]      ; rcx = list->first
+    mov rcx, [rdi]
     test rcx, rcx
-    jne .append_to_end  ; si no es NULL, vamos a else
+    jne .append_to_end
 
-    ; list->first = node
-    mov rcx, [rsp]      ; rcx = node
+    mov rcx, [rsp]
     mov [rdi], rcx
-
-    ; list->last = node
     mov [rdi + 8], rcx
-
     jmp .done
 
 .append_to_end:
-    mov rcx, [rdi + 8]  ; rcx = list->last
-    mov rbx, [rsp]      ; rbx = node
+    mov rcx, [rdi + 8]
+    mov rbx, [rsp]
 
-    ; list->last->next = node
     mov [rcx], rbx
-
-    ; node->previous = list->last
     mov [rbx + 8], rcx
-
-    ; list->last = node
     mov [rdi + 8], rbx
 
 .done:
-    add rsp, 8          ; limpiar stack (node)
+    add rsp, 8
     ret
 
 .restore_and_end:
-    add rsp, 8          ; limpiar stack (list)
+    add rsp, 8
 .end:
     ret
 
-
-
 string_proc_list_concat_asm:
-    ; Entradas:
-    ; rdi = puntero a la lista 'string_proc_list* list'
-    ; rsi = uint8_t 'type'
-    ; rdx = puntero a 'char* hash'
+    push r12
+    mov r12, rdi
+    mov r13, rsi
+    mov r14, rdx
 
-    ; Guardar registros importantes
-    push r12                ; Guardamos r12 (lo vamos a usar para guardar list)
-    mov r12, rdi            ; r12 = list
-    mov r13, rsi            ; r13 = type
-    mov r14, rdx            ; r14 = hash
-
-    ; Comprobar si list o hash son NULL
     test r12, r12
     jz .return_null_clean
     test r14, r14
     jz .return_null_clean
 
-    ; Inicializar total_len con strlen(hash)
     mov rdi, r14
     call strlen
-    mov r8, rax             ; r8 = total_len
+    mov r8, rax
 
-    ; Iterar sobre los nodos para sumar longitudes
-    mov rbx, [r12]          ; rbx = list->first
+    mov rbx, [r12]
 .len_loop:
     test rbx, rbx
     jz .len_done
 
-    movzx r9, byte [rbx + 16]    ; ✅ type
+    movzx r9, byte [rbx + 8]
     cmp r9, r13
     jne .len_next
 
-    mov r10, [rbx + 24]         ; ✅ hash
+    mov r10, [rbx + 16]
     test r10, r10
     jz .len_next
     mov rdi, r10
@@ -161,41 +124,38 @@ string_proc_list_concat_asm:
     add r8, rax
 
 .len_next:
-    mov rbx, [rbx]              ; rbx = current->next
+    mov rbx, [rbx]
     jmp .len_loop
 
 .len_done:
-    ; Reservar memoria para result (total_len + 1)
     mov rdi, r8
     inc rdi
     call malloc
     test rax, rax
     jz .return_null_clean
-    mov r15, rax                ; r15 = result
+    mov r15, rax
 
-    ; Inicializar result con '\0'
     mov byte [r15], 0
 
     ; strcpy(result, hash)
-    mov rdi, r14
-    mov rsi, r15
+    mov rdi, r15      ; destino
+    mov rsi, r14      ; origen
     call strcpy
 
-    ; Segunda iteración: concatenar hashes
-    mov rbx, [r12]              ; rbx = list->first
+    mov rbx, [r12]
 .concat_loop:
     test rbx, rbx
     jz .concat_done
 
-    movzx r9, byte [rbx + 16]    ; ✅ type
+    movzx r9, byte [rbx + 8]
     cmp r9, r13
     jne .concat_next
 
-    mov r10, [rbx + 24]         ; ✅ hash
+    mov r10, [rbx + 16]
     test r10, r10
     jz .concat_next
-    mov rdi, r10
-    mov rsi, r15
+    mov rdi, r15      ; destino
+    mov rsi, r10      ; origen
     call strcat
 
 .concat_next:
@@ -203,7 +163,7 @@ string_proc_list_concat_asm:
     jmp .concat_loop
 
 .concat_done:
-    mov rax, r15                ; devolver result
+    mov rax, r15
     pop r12
     ret
 
@@ -211,4 +171,5 @@ string_proc_list_concat_asm:
     xor rax, rax
     pop r12
     ret
+
     
