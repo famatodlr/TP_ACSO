@@ -19,19 +19,18 @@ string_proc_list_create_asm:
     ret
 
 
-
 string_proc_node_create_asm:
     push    rbp
     mov     rbp, rsp
-    mov     eax, edi                  ; type (uint8_t)
-    mov     rdx, rsi                  ; hash (char *)
+    mov     r8b, dil              ; guardar type (uint8_t)
+    mov     rdx, rsi              ; hash (char *)
     mov     edi, 32
     call    malloc
     test    rax, rax
     je      .fail
     mov     qword [rax], 0           ; prev = NULL
     mov     qword [rax+8], 0         ; next = NULL
-    mov     byte [rax+16], al        ; type
+    mov     byte [rax+16], r8b       ; type
     mov     qword [rax+24], rdx      ; hash
     jmp     .done
 .fail:
@@ -41,63 +40,66 @@ string_proc_node_create_asm:
     ret
 
 
-
 string_proc_list_add_node_asm:
     push    rbp
     mov     rbp, rsp
-    mov     rdx, rsi      ; type (uint8_t)
-    mov     rcx, rdx      ; copiar type en rcx para después
-    mov     rdx, rdx      ; redundante pero clara: rdx = hash
     test    rdi, rdi
-    je      .done
-    mov     esi, ecx
+    je      .done                  ; si lista es NULL
+
+    mov     rbx, rdi              ; lista
+    mov     rsi, rsi              ; hash
+    mov     dl, dl                ; type
+
+    ; llamar a string_proc_node_create_asm(type, hash)
+    mov     edi, edx              ; pasar type en edi (uint8_t)
     call    string_proc_node_create_asm
     test    rax, rax
-    je      .done
-    mov     rbx, rdi                  ; lista
-    mov     rcx, [rbx]               ; lista->first
+    je      .done                 ; fallo malloc
+
+    mov     rcx, [rbx]            ; lista->first
     test    rcx, rcx
     je      .empty_list
+
     ; lista no vacía
-    mov     rdx, [rbx+8]             ; lista->last
-    mov     [rdx], rax               ; last->next = nuevo
-    mov     [rax+8], rdx             ; nuevo->prev = last
-    mov     [rbx+8], rax             ; lista->last = nuevo
+    mov     rdx, [rbx+8]          ; last
+    mov     [rdx], rax            ; last->next = nuevo
+    mov     [rax+8], rdx          ; nuevo->prev = last
+    mov     [rbx+8], rax          ; lista->last = nuevo
     jmp     .done
+
 .empty_list:
-    mov     [rbx], rax               ; lista->first = nuevo
-    mov     [rbx+8], rax             ; lista->last = nuevo
+    mov     [rbx], rax            ; lista->first = nuevo
+    mov     [rbx+8], rax          ; lista->last = nuevo
 .done:
     pop     rbp
     ret
 
 
-
-
 string_proc_list_concat_asm:
     push    rbp
     mov     rbp, rsp
+
     test    rdi, rdi
     je      .fail
     test    rdx, rdx
     je      .fail
 
-    mov     r8, rdi                  ; list
-    mov     r9b, sil                 ; type
-    mov     r10, rdx                 ; base string
+    mov     r8, rdi               ; list
+    mov     r9b, sil              ; type
+    mov     r10, rdx              ; base string
 
     ; strlen(base string)
     mov     rdi, r10
     call    strlen
-    mov     r11, rax                 ; total length
-    add     r11, 1                   ; for null terminator
+    mov     r11, rax
+    add     r11, 1                ; null terminator
 
-    ; recorrer la lista
-    mov     rbx, [r8]                ; node = list->first
+    ; calcular tamaño total a concatenar
+    mov     rbx, [r8]             ; node = list->first
 .loop_len:
     test    rbx, rbx
     je      .alloc_buffer
-    movzx   eax, byte [rbx+16]       ; node->type
+    movzx   eax, byte [rbx+16]
     cmp     al, r9b
     jne     .next_node
     mov     rdi, [rbx+24]
@@ -106,7 +108,7 @@ string_proc_list_concat_asm:
     call    strlen
     add     r11, rax
 .next_node:
-    mov     rbx, [rbx]               ; node = node->next
+    mov     rbx, [rbx]            ; node = node->next
     jmp     .loop_len
 
 .alloc_buffer:
@@ -114,15 +116,15 @@ string_proc_list_concat_asm:
     call    malloc
     test    rax, rax
     je      .fail
-    mov     r12, rax                 ; buffer ptr
-    mov     byte [r12], 0            ; inicializa string vacía
+    mov     r12, rax
+    mov     byte [r12], 0         ; buffer[0] = '\0'
 
     ; strcat(base string)
     mov     rdi, r12
     mov     rsi, r10
     call    strcat
 
-    ; repetir el loop para concatenar
+    ; concatenar los hashes
     mov     rbx, [r8]
 .loop_cat:
     test    rbx, rbx
@@ -143,8 +145,10 @@ string_proc_list_concat_asm:
     mov     rax, r12
     pop     rbp
     ret
+
 .fail:
     xor     rax, rax
     pop     rbp
     ret
 
+    
