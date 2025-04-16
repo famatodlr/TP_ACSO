@@ -7,6 +7,7 @@ global string_proc_node_create_asm
 global string_proc_list_add_node_asm
 global string_proc_list_concat_asm
 
+
 string_proc_list_create_asm:
     push    rbp
     mov     edi, 16              ; Tamanho de la lista
@@ -23,6 +24,8 @@ string_proc_list_create_asm:
     xor     rax, rax
     pop     rbp
     ret
+
+
 
 
 string_proc_node_create_asm:
@@ -47,6 +50,9 @@ string_proc_node_create_asm:
     ret
 
 
+
+
+
 string_proc_list_add_node_asm:
     push    rbp
     test    rdi, rdi             ; Si lista es NULL
@@ -64,7 +70,7 @@ string_proc_list_add_node_asm:
 
     mov     rcx, [rbx]           ; lista->first
     test    rcx, rcx
-    je      .empty_list
+    je      .empty_list          ; Si lista está vacía, ir a .empty_list
 
     ; Si la lista no está vacía
     mov     rdx, [rbx+8]         ; lista->last
@@ -75,6 +81,12 @@ string_proc_list_add_node_asm:
     mov     [rbx+8], rax         ; lista->last = nuevo nodo
     jmp     .done
 
+.empty_list:
+    ; Caso cuando la lista está vacía
+    mov     [rbx], rax           ; lista->first = nuevo nodo
+    mov     [rbx+8], rax         ; lista->last = nuevo nodo
+    jmp     .done
+
 .done_last_null:
     ; Si la lista tiene el puntero 'last' nulo, se asegura de que se actualice correctamente
     mov     [rbx], rax           ; lista->first = nuevo nodo
@@ -82,6 +94,7 @@ string_proc_list_add_node_asm:
 .done:
     pop     rbp
     ret
+
 
 
 string_proc_list_concat_asm:
@@ -158,4 +171,3 @@ string_proc_list_concat_asm:
     pop     rbp
     ret
 
-    
