@@ -7,7 +7,7 @@ global string_proc_node_create_asm
 global string_proc_list_add_node_asm
 global string_proc_list_concat_asm
 
-string_proc_list_create:
+string_proc_list_create_asm:
         push    rbp
         mov     rbp, rsp
         sub     rsp, 16
@@ -27,7 +27,13 @@ string_proc_list_create:
 .L3:
         leave
         ret
-string_proc_node_create:
+
+
+
+
+
+        
+string_proc_node_create_asm:
         push    rbp
         mov     rbp, rsp
         sub     rsp, 32
@@ -56,7 +62,12 @@ string_proc_node_create:
 .L6:
         leave
         ret
-string_proc_list_add_node:
+
+
+
+
+
+string_proc_list_add_node_asm:
         push    rbp
         mov     rbp, rsp
         sub     rsp, 48
@@ -106,7 +117,12 @@ string_proc_list_add_node:
 .L7:
         leave
         ret
-string_proc_list_concat:
+
+
+
+
+
+string_proc_list_concat_asm:
         push    rbp
         mov     rbp, rsp
         sub     rsp, 64
@@ -198,3 +214,4 @@ string_proc_list_concat:
 .L17:
         leave
         ret
+
