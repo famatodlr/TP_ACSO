@@ -121,94 +121,95 @@ string_proc_list_add_node_asm:
 
 
 
-
 string_proc_list_concat_asm:
     ; Entradas:
     ; rdi = puntero a la lista 'string_proc_list* list'
     ; rsi = uint8_t 'type'
     ; rdx = puntero a 'char* hash'
 
+    ; Guardar registros importantes
+    push r12                ; Guardamos r12 (lo vamos a usar para guardar list)
+    mov r12, rdi            ; r12 = list
+    mov r13, rsi            ; r13 = type
+    mov r14, rdx            ; r14 = hash
+
     ; Comprobar si list o hash son NULL
-    test rdi, rdi
-    jz .return_null
-    test rdx, rdx
-    jz .return_null
+    test r12, r12
+    jz .return_null_clean
+    test r14, r14
+    jz .return_null_clean
 
-    ; Guardar punteros originales en registros seguros
-    mov r12, rdi        ; r12 = list
-    mov r13, rsi        ; r13 = type
-    mov r14, rdx        ; r14 = hash
-
-    ; Inicializar 'total_len' con la longitud de 'hash'
-    mov rdi, r14        ; rdi = hash
+    ; Inicializar total_len con strlen(hash)
+    mov rdi, r14
     call strlen
-    mov r8, rax         ; r8 = total_len = strlen(hash)
+    mov r8, rax             ; r8 = total_len
 
-    ; Iterar sobre la lista y acumular longitudes
-    mov rbx, [r12]      ; rbx = list->first
-.next_node:
+    ; Iterar sobre los nodos para sumar longitudes
+    mov rbx, [r12]          ; rbx = list->first
+.len_loop:
     test rbx, rbx
-    jz .done_iterating
-    movzx r9, byte [rbx + 8]  ; r9 = current->type (uint8_t)
-    cmp r9, r13
-    jne .next_node_continue
+    jz .len_done
 
-    mov r10, [rbx + 16]   ; r10 = current->hash
+    movzx r9, byte [rbx + 8]    ; r9 = current->type (uint8_t extendido)
+    cmp r9, r13
+    jne .len_next
+
+    mov r10, [rbx + 16]         ; r10 = current->hash
     test r10, r10
-    jz .next_node_continue
+    jz .len_next
     mov rdi, r10
     call strlen
-    add r8, rax           ; total_len += strlen(current->hash)
+    add r8, rax
 
-.next_node_continue:
-    mov rbx, [rbx]        ; avanzar al siguiente nodo
-    jmp .next_node
+.len_next:
+    mov rbx, [rbx]              ; rbx = current->next
+    jmp .len_loop
 
-.done_iterating:
-    ; Reservar memoria para total_len + 1
+.len_done:
+    ; Reservar memoria para result (total_len + 1)
     mov rdi, r8
     inc rdi
     call malloc
     test rax, rax
-    jz .return_null
+    jz .return_null_clean
+    mov r15, rax                ; r15 = result
 
-    ; Guardar puntero a result en r15
-    mov r15, rax
-
-    ; Inicializar result con cadena vacía
+    ; Inicializar result con '\0'
     mov byte [r15], 0
 
-    ; Copiar hash en result: strcpy(result, hash)
-    mov rdi, r15
-    mov rsi, r14
+    ; strcpy(result, hash)
+    mov rdi, r14
+    mov rsi, r15
     call strcpy
 
-    ; Iterar sobre la lista y concatenar los hashes
-    mov rbx, [r12]         ; rbx = list->first
-.next_concat:
+    ; Segunda iteración: concatenar hashes
+    mov rbx, [r12]              ; rbx = list->first
+.concat_loop:
     test rbx, rbx
-    jz .done_concat
-    movzx r9, byte [rbx + 8]  ; r9 = current->type
-    cmp r9, r13
-    jne .next_concat_continue
+    jz .concat_done
 
-    mov r10, [rbx + 16]    ; r10 = current->hash
+    movzx r9, byte [rbx + 8]
+    cmp r9, r13
+    jne .concat_next
+
+    mov r10, [rbx + 16]
     test r10, r10
-    jz .next_concat_continue
-    mov rdi, r15           ; rdi = result
-    mov rsi, r10           ; rsi = current->hash
+    jz .concat_next
+    mov rdi, r10
+    mov rsi, r15
     call strcat
 
-.next_concat_continue:
-    mov rbx, [rbx]         ; avanzar al siguiente nodo
-    jmp .next_concat
+.concat_next:
+    mov rbx, [rbx]
+    jmp .concat_loop
 
-.done_concat:
-    mov rax, r15           ; devolver result
+.concat_done:
+    mov rax, r15                ; devolver result
+    pop r12
     ret
 
-.return_null:
+.return_null_clean:
     xor rax, rax
+    pop r12
     ret
-
     
