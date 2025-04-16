@@ -1,4 +1,6 @@
-
+extern malloc
+extern strlen
+extern strcat
 
 string_proc_list_create_asm:
     push    rbp
@@ -49,7 +51,7 @@ string_proc_list_add_node_asm:
     test    rdi, rdi
     je      .done
     mov     esi, ecx
-    call    string_proc_node_create
+    call    string_proc_node_create_asm
     test    rax, rax
     je      .done
     mov     rbx, rdi                  ; lista
