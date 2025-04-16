@@ -2,6 +2,11 @@ extern malloc
 extern strlen
 extern strcat
 
+global string_proc_list_create_asm
+global string_proc_node_create_asm
+global string_proc_list_add_node_asm
+global string_proc_list_concat_asm
+
 string_proc_list_create_asm:
     push    rbp
     mov     edi, 16              ; Tamanho de la lista
@@ -150,4 +155,4 @@ string_proc_list_concat_asm:
     pop     rbp
     ret
 
-    
+
