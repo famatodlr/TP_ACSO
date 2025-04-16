@@ -18,7 +18,8 @@ ERRORDIFF=0
 
 ./tester
 
-$DIFFER salida.caso.propio.ej1.txt salida.catedra.ej1.txt > "$HOME/diff1"if [ $? -ne 0 ]; then
+$DIFFER salida.caso.propio.ej1.txt salida.catedra.ej1.txt > "$HOME/diff1"
+if [ $? -ne 0 ]; then
   echo "  **Discrepancia en el ejercicio 1"
   ERRORDIFF=1
 fi
