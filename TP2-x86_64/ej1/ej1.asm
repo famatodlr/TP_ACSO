@@ -120,7 +120,6 @@ string_proc_list_add_node_asm:
 
 
 
-
 string_proc_list_concat_asm:
     ; Entradas:
     ; rdi = puntero a la lista 'string_proc_list* list'
@@ -150,11 +149,11 @@ string_proc_list_concat_asm:
     test rbx, rbx
     jz .len_done
 
-    movzx r9, byte [rbx + 8]    ; r9 = current->type (uint8_t extendido)
+    movzx r9, byte [rbx + 16]    ; ✅ type
     cmp r9, r13
     jne .len_next
 
-    mov r10, [rbx + 16]         ; r10 = current->hash
+    mov r10, [rbx + 24]         ; ✅ hash
     test r10, r10
     jz .len_next
     mov rdi, r10
@@ -188,11 +187,11 @@ string_proc_list_concat_asm:
     test rbx, rbx
     jz .concat_done
 
-    movzx r9, byte [rbx + 8]
+    movzx r9, byte [rbx + 16]    ; ✅ type
     cmp r9, r13
     jne .concat_next
 
-    mov r10, [rbx + 16]
+    mov r10, [rbx + 24]         ; ✅ hash
     test r10, r10
     jz .concat_next
     mov rdi, r10
