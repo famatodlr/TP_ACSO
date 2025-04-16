@@ -122,7 +122,6 @@ string_proc_list_add_node_asm:
 
 
 
-
 string_proc_list_concat_asm:
     ; Entradas:
     ; rdi = puntero a la lista 'string_proc_list* list'
@@ -130,76 +129,86 @@ string_proc_list_concat_asm:
     ; rdx = puntero a 'char* hash'
 
     ; Comprobar si list o hash son NULL
-    test rdi, rdi            ; Comprobar si 'list' es NULL
+    test rdi, rdi
     jz .return_null
-    test rdx, rdx            ; Comprobar si 'hash' es NULL
+    test rdx, rdx
     jz .return_null
+
+    ; Guardar punteros originales en registros seguros
+    mov r12, rdi        ; r12 = list
+    mov r13, rsi        ; r13 = type
+    mov r14, rdx        ; r14 = hash
 
     ; Inicializar 'total_len' con la longitud de 'hash'
-    mov rax, rdx             ; rax = puntero a 'hash'
-    call strlen              ; Llamar a la función strlen
-    mov r8, rax              ; r8 = longitud de 'hash'
+    mov rdi, r14        ; rdi = hash
+    call strlen
+    mov r8, rax         ; r8 = total_len = strlen(hash)
 
-    ; Iterar sobre los nodos de la lista y calcular el total_len
-    mov rbx, [rdi]           ; rbx = puntero a la primera lista de nodos (list->first)
+    ; Iterar sobre la lista y acumular longitudes
+    mov rbx, [r12]      ; rbx = list->first
 .next_node:
-    test rbx, rbx            ; Verificar si el nodo actual es NULL
+    test rbx, rbx
     jz .done_iterating
-    mov r9, [rbx + 8]        ; r9 = type del nodo (current->type)
-    cmp r9, rsi              ; Comparar tipo con el parámetro 'type'
-    jne .next_node_continue   ; Si no es igual, ir al siguiente nodo
+    movzx r9, byte [rbx + 8]  ; r9 = current->type (uint8_t)
+    cmp r9, r13
+    jne .next_node_continue
 
-    mov r10, [rbx + 16]      ; r10 = puntero a hash (current->hash)
-    test r10, r10            ; Verificar si hash del nodo es NULL
+    mov r10, [rbx + 16]   ; r10 = current->hash
+    test r10, r10
     jz .next_node_continue
-    call strlen              ; Llamar a la función strlen para obtener la longitud de 'current->hash'
-    add r8, rax              ; Sumar la longitud de 'current->hash' a 'total_len'
+    mov rdi, r10
+    call strlen
+    add r8, rax           ; total_len += strlen(current->hash)
 
 .next_node_continue:
-    mov rbx, [rbx]           ; rbx = siguiente nodo (current = current->next)
+    mov rbx, [rbx]        ; avanzar al siguiente nodo
     jmp .next_node
 
 .done_iterating:
-    ; Reservar memoria para la cadena resultante (total_len + 1)
-    mov rdi, r8              ; rdi = total_len
-    inc rdi                  ; rdi = total_len + 1 (espacio para el null terminator)
-    call malloc              ; Reservar memoria para el resultado
-    test rax, rax            ; Comprobar si malloc falló
+    ; Reservar memoria para total_len + 1
+    mov rdi, r8
+    inc rdi
+    call malloc
+    test rax, rax
     jz .return_null
 
-    ; Inicializar la cadena resultante con una cadena vacía
-    mov byte [rax], 0        ; result[0] = '\0'
+    ; Guardar puntero a result en r15
+    mov r15, rax
 
-    ; Copiar 'hash' en la cadena resultante
-    mov rdi, rdx             ; rdi = puntero a 'hash'
-    mov rsi, rax             ; rsi = puntero a la cadena resultante
-    call strcpy              ; Copiar 'hash' en 'result'
+    ; Inicializar result con cadena vacía
+    mov byte [r15], 0
 
-    ; Iterar nuevamente sobre la lista y concatenar los hashes
-    mov rbx, [rdi]           ; rbx = puntero a la primera lista de nodos (list->first)
+    ; Copiar hash en result: strcpy(result, hash)
+    mov rdi, r15
+    mov rsi, r14
+    call strcpy
+
+    ; Iterar sobre la lista y concatenar los hashes
+    mov rbx, [r12]         ; rbx = list->first
 .next_concat:
-    test rbx, rbx            ; Verificar si el nodo actual es NULL
+    test rbx, rbx
     jz .done_concat
-    mov r9, [rbx + 8]        ; r9 = type del nodo (current->type)
-    cmp r9, rsi              ; Comparar tipo con el parámetro 'type'
-    jne .next_concat_continue ; Si no es igual, ir al siguiente nodo
+    movzx r9, byte [rbx + 8]  ; r9 = current->type
+    cmp r9, r13
+    jne .next_concat_continue
 
-    mov r10, [rbx + 16]      ; r10 = puntero a hash (current->hash)
-    test r10, r10            ; Verificar si hash del nodo es NULL
+    mov r10, [rbx + 16]    ; r10 = current->hash
+    test r10, r10
     jz .next_concat_continue
-    mov rdi, r10             ; rdi = puntero a 'current->hash'
-    mov rsi, rax             ; rsi = puntero a la cadena resultante
-    call strcat              ; Concatenar 'current->hash' en 'result'
+    mov rdi, r15           ; rdi = result
+    mov rsi, r10           ; rsi = current->hash
+    call strcat
 
 .next_concat_continue:
-    mov rbx, [rbx]           ; rbx = siguiente nodo (current = current->next)
+    mov rbx, [rbx]         ; avanzar al siguiente nodo
     jmp .next_concat
 
 .done_concat:
-    ; Regresar el puntero a la cadena resultante
-    mov rax, rsi             ; Retornar puntero a la cadena resultante
+    mov rax, r15           ; devolver result
     ret
 
 .return_null:
-    xor rax, rax             ; Retornar NULL
+    xor rax, rax
     ret
+
+    
