@@ -68,12 +68,15 @@ string_proc_list_add_node_asm:
 
     ; Si la lista no está vacía
     mov     rdx, [rbx+8]         ; lista->last
+    test    rdx, rdx
+    je      .done_last_null
     mov     [rdx], rax           ; last->next = nuevo nodo
     mov     [rax+8], rdx         ; nuevo nodo->prev = last
     mov     [rbx+8], rax         ; lista->last = nuevo nodo
     jmp     .done
 
-.empty_list:
+.done_last_null:
+    ; Si la lista tiene el puntero 'last' nulo, se asegura de que se actualice correctamente
     mov     [rbx], rax           ; lista->first = nuevo nodo
     mov     [rbx+8], rax         ; lista->last = nuevo nodo
 .done:
