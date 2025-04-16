@@ -1,0 +1,18 @@
+Franco Amato de Lusarreta
+
+famatodelusarreta@udesa.edu.ar
+
+Fase 1:
+La bomba compara el string ingresado con uno esperado usando la función `strings_not_equal`. Esta función toma como segundo parámetro (RSI) una dirección donde está almacenada la frase correcta. Con un breakpoint en `strings_not_equal` y usando `x/s $rsi`, se puede ver cuál es ese string. Si no coinciden, la bomba explota; si son iguales, se avanza de fase.
+
+Respuesta: Al que es amigo, jamas lo dejen en la estacada Siempre el amigo mas fiel es una conduta honrada
+
+Fase 2:
+El input consiste en dos enteros. Internamente se llama a una función que realiza dos validaciones. Primero, que el primer número tenga exactamente 11 bits en 1 y segundo que el XOR entre ambos números resulte en un número negativo. Se utilizó fuerza bruta para encontrar dos numeros que cumplan.
+
+Respuesta: -7921 10000
+
+Fase 3:
+Esta fase recibe un string y un entero. La función "cuenta" hace una búsqueda binaria en las palabras del archivo "palabras.txt". La palabra del input debe requerir entre 7 y 11 iteraciones para ser encontrada, sino explota la bomba. Además, el número del input tiene que coincidir con la cantidad exacta de iteraciones realizadas, sino explota la bomba. Se utilizó un script de Python que simula la búsqueda binaria sobre el archivo para encontrar qué palabras cumplen con esa cantidad de pasos.
+
+Respuesta: abanicar 9
