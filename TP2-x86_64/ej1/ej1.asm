@@ -1,11 +1,18 @@
+extern malloc           ; Declaración externa de malloc
+extern strlen           ; Declaración externa de strlen
+extern strcat           ; Declaración externa de strcat
 
+section .data
+    size dq 16          ; Ejemplo de un tamaño para malloc
+
+section .text
 
 string_proc_list_create:
         push    rbp
         mov     rbp, rsp
         sub     rsp, 16
-        mov     edi, 16
-        call    malloc
+        mov     edi, [size]     ; Usar un tamaño predefinido o el valor deseado
+        call    malloc          ; Llamada a malloc
         mov     qword [rbp-8], rax
         cmp     qword [rbp-8], 0
         jne     .L2
@@ -20,8 +27,6 @@ string_proc_list_create:
 .L3:
         leave
         ret
-
-
 
 string_proc_node_create:
         push    rbp
@@ -52,9 +57,6 @@ string_proc_node_create:
 .L6:
         leave
         ret
-
-
-
 
 string_proc_list_add_node:
         push    rbp
@@ -106,9 +108,6 @@ string_proc_list_add_node:
 .L7:
         leave
         ret
-
-
-
 
 string_proc_list_concat:
         push    rbp
@@ -202,5 +201,3 @@ string_proc_list_concat:
 .L17:
         leave
         ret
-
-
