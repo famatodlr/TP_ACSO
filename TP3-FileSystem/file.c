@@ -19,19 +19,20 @@ int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *bu
         return -1;  // Error al buscar el bloque de datos
     }
 
-    if (diskimg_readsector(fs->dfd, blockAddr, (char *)buf) != 0) {
+    if (diskimg_readsector(fs->dfd, blockAddr, buf) != 0) {
         return -1;  // Error al leer el bloque de datos
     }
 
-    int filesize = (inp.i_size0 << 16) | inp.i_size1;
-    int startByte = blockNum * 512;
-    int bytesLeft = filesize - startByte;
-
-    if (bytesLeft >= 512) {
-        return 512;
-    } else if (bytesLeft > 0) {
-        return bytesLeft;
-    } else {
-        return 0;  // El bloque solicitado está fuera del rango del archivo
+    int filesize = inode_getsize(&inp);
+    if(filesize < 0){
+        return -1;
     }
+
+    int startByte = blockNum * DISKIMG_SECTOR_SIZE;
+    if (startByte >= filesize){
+        return 0;
+    }
+
+    int bytesLeft = filesize - startByte;
+    return (bytesLeft >= DISKIMG_SECTOR_SIZE) ? DISKIMG_SECTOR_SIZE : bytesLeft;
 }
