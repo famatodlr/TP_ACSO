@@ -19,7 +19,7 @@ int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *bu
         return -1;  // Error al buscar el bloque de datos
     }
 
-    if (diskimg_read(fs->dfd, blockAddr, (char *)buf) != 0) {
+    if (diskimg_readsector(fs->dfd, blockAddr, (char *)buf) != 0) {
         return -1;  // Error al leer el bloque de datos
     }
 
