@@ -17,7 +17,7 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
     int offset = (inumber - 1) % (512 / sizeof(struct inode));
 
 
-    if (diskimg_read(fs->dfd, inode_block, (char *)inp) != 0) {
+    if (diskimg_readsector(fs->dfd, inode_block, (char *)inp) != 0) {
         return -1;  // Error al leer el inodo
     }
 
