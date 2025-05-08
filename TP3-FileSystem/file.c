@@ -23,5 +23,15 @@ int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *bu
         return -1;  // Error al leer el bloque de datos
     }
 
-    return 0;
+    int filesize = (inp.i_size0 << 16) | inp.i_size1;
+    int startByte = blockNum * 512;
+    int bytesLeft = filesize - startByte;
+
+    if (bytesLeft >= 512) {
+        return 512;
+    } else if (bytesLeft > 0) {
+        return bytesLeft;
+    } else {
+        return 0;  // El bloque solicitado está fuera del rango del archivo
+    }
 }
