@@ -57,6 +57,12 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
 
         return block;
     } else {
+        if ((inp->i_mode & ILARG) && inp->i_addr[0] != 0 && blockNum < 8) {
+            // Caso especial: directorios marcados como grandes pero usan bloques directos
+            return inp->i_addr[blockNum];
+        }
+
+
         int simple_limit = 7 * ptrs_per_block;
 
         if (blockNum < simple_limit) {
@@ -130,6 +136,7 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
         }
     }
 }
+
 int inode_getsize(struct inode *inp) {
   return ((inp->i_size0 << 16) | inp->i_size1);
 }
