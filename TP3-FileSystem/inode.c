@@ -38,20 +38,23 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
 
     int ptrs_per_block = DISKIMG_SECTOR_SIZE / sizeof(unsigned short);
 
-    // Archivos pequeños (no ILARG)
     if (!(inp->i_mode & ILARG)) {
+        printf("DEBUG: inode %ld es pequeño, usando acceso directo para bloque %d\n", inp - fs->inode_map, blockNum);
         if (blockNum >= 8) return -1;
         int block = inp->i_addr[blockNum];
+        printf("DEBUG: i_addr[%d] = %d\n", blockNum, block);
         if (block == 0) return -1;
         return block;
     } else {
-        // Archivos grandes (ILARG): acceso indirecto simple y doble
+        printf("DEBUG: inode %ld es grande (ILARG), bloque lógico %d\n", inp - fs->inode_map, blockNum);
+
         int simple_limit = 7 * ptrs_per_block;
 
         if (blockNum < simple_limit) {
-            // Indirección simple (i_addr[0] a i_addr[6])
             int indir_block_index = blockNum / ptrs_per_block;
             int indir_block_offset = blockNum % ptrs_per_block;
+
+            printf("DEBUG: indirecto simple, i_addr[%d] = %d\n", indir_block_index, inp->i_addr[indir_block_index]);
 
             if (indir_block_index >= 7) return -1;
             int indir_block_num = inp->i_addr[indir_block_index];
@@ -62,12 +65,15 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
             if (res != DISKIMG_SECTOR_SIZE) return -1;
 
             int data_block_num = ptrs[indir_block_offset];
+            printf("DEBUG: bloque de datos desde puntero indirecto simple = %d\n", data_block_num);
             if (data_block_num == 0) return -1;
             return data_block_num;
         } else {
-            // Indirección doble (i_addr[7])
             int double_blockNum = blockNum - simple_limit;
+            printf("DEBUG: acceso doble indirecto para bloque lógico %d (offset %d)\n", blockNum, double_blockNum);
+
             int indir_block_num = inp->i_addr[7];
+            printf("DEBUG: i_addr[7] (doble indirecto) = %d\n", indir_block_num);
             if (indir_block_num == 0) return -1;
 
             unsigned short first_level[ptrs_per_block];
@@ -79,6 +85,7 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
 
             if (first_index >= ptrs_per_block) return -1;
             int second_indir_block = first_level[first_index];
+            printf("DEBUG: segundo nivel de indirección: bloque %d\n", second_indir_block);
             if (second_indir_block == 0) return -1;
 
             unsigned short second_level[ptrs_per_block];
@@ -86,6 +93,7 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
             if (res != DISKIMG_SECTOR_SIZE) return -1;
 
             int data_block_num = second_level[second_index];
+            printf("DEBUG: bloque de datos desde puntero doble indirecto = %d\n", data_block_num);
             if (data_block_num == 0) return -1;
             return data_block_num;
         }
