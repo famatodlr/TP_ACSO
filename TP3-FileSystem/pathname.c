@@ -7,29 +7,36 @@
 #define ROOT_INODE_NUMBER 1
 
 int pathname_lookup(struct unixfilesystem *fs, const char *pathname) {
-    if (pathname == NULL || fs == NULL) return -1;
+   // Path vacío o nulo
+   if (pathname == NULL || strlen(pathname) == 0) {
+    return -1;
+}
 
-    // Si el path es "/", devolvemos el inodo raíz
-    if (strcmp(pathname, "/") == 0) {
-        return ROOT_INODE_NUMBER;
+// Copia local para tokenizar (strtok modifica el string)
+char path_copy[1024];
+strncpy(path_copy, pathname, sizeof(path_copy));
+path_copy[sizeof(path_copy) - 1] = '\0';
+
+// Comenzamos desde el inodo raíz
+int current_inumber = 1;
+
+// Tokenizamos el path ignorando '/'
+char *token = strtok(path_copy, "/");
+while (token != NULL) {
+    struct direntv6 dir_entry;
+
+    // Buscar el token actual en el directorio actual
+    if (directory_findname(fs, token, current_inumber, &dir_entry) < 0) {
+        return -1;  // No se encontró el componente
     }
 
-    char pathcopy[strlen(pathname) + 1];
-    strcpy(pathcopy, pathname);
+    // Actualizar el número de inodo para el siguiente nivel
+    current_inumber = dir_entry.d_inumber;
 
-    int curr_inumber = ROOT_INODE_NUMBER;
+    // Siguiente componente del path
+    token = strtok(NULL, "/");
+}
 
-    // Nos saltamos el primer '/' si lo hay
-    char *token = strtok(pathcopy, "/");
-    while (token != NULL) {
-        struct direntv6 dirEnt;
-        if (directory_findname(fs, token, curr_inumber, &dirEnt) != 0) {
-            return -1; // No se encontró un componente del path
-        }
+return current_inumber;
 
-        curr_inumber = dirEnt.d_inumber;
-        token = strtok(NULL, "/");
-    }
-
-    return curr_inumber;
 }
