@@ -49,12 +49,10 @@ int directory_findname(struct unixfilesystem *fs, const char *name,
             // Comparación robusta: no permite strings más largos que 14
             if (strlen(name) <= 14 && strncmp(entry->d_name, name, 14) == 0) {
                 *dirEnt = *entry;
-                // printf("Encontrado '%s' en inodo %d\n", name, entry->d_inumber); // debug opcional
                 return 0;
             }
         }
     }
 
-    // printf("No se encontró '%s' en inodo %d\n", name, dirinumber); // debug opcional
     return -1;
 }
