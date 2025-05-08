@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "inode.h"
-#include "string.h"
 #include "diskimg.h"
 
 
@@ -14,23 +13,18 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
         return -1;   // inodo invalido
     }
 
-
-
-    int inode_block = INODE_START_SECTOR + (inumber - 1) / (512 / sizeof(struct inode));
+    int inodes_per_block = DISKIMG_SECTOR_SIZE / sizeof(struct inode);
+    int inode_block = INODE_START_SECTOR + (inumber - 1) / inodes_per_block;
     int offset = (inumber - 1) % (512 / sizeof(struct inode));
 
+    struct inode buf[inodes_per_block];
 
-    if (diskimg_readsector(fs->dfd, inode_block, (char *)inp) != 0) {
+    if (diskimg_readsector(fs->dfd, inode_block, buf) != DISKIMG_SECTOR_SIZE) {
         return -1;  // Error al leer el inodo
     }
 
-    struct inode block[(512 / sizeof(struct inode))];
+    *inp = buf[offset];
 
-    if (diskimg_readsector(fs->dfd, inode_block, block) == -1){
-        return -1;
-    }
-
-    memcpy( inp, &block[offset], sizeof(struct inode));
     return 0;
 }
 
@@ -123,7 +117,7 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
 
             unsigned short second_level[ptrs_per_block];
             res = diskimg_readsector(fs->dfd, second_indir_block, second_level);
-            
+
             if (res != DISKIMG_SECTOR_SIZE){
                 return -1;
             }
