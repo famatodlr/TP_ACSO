@@ -1,4 +1,3 @@
-
 #include "pathname.h"
 #include "directory.h"
 #include "inode.h"
@@ -8,31 +7,31 @@
 #include <assert.h>
 
 /**
- * TODO
+ * Busca el número de inodo asociado a un pathname.
+ * Devuelve el inumber correspondiente si lo encuentra, o -1 en caso de error.
  */
 int pathname_lookup(struct unixfilesystem *fs, const char *pathname) {
     if (!pathname || pathname[0] != '/') {
-        // Solo soporta pathnames absolutos
         return -1;
     }
 
-    // Comenzar desde el inodo raíz (usualmente 1)
-    int curr_inumber = 1;
-    char path_copy[256];
-    strncpy(path_copy, pathname, sizeof(path_copy));
-    path_copy[sizeof(path_copy) - 1] = '\0';
+    int current_inode = 1;
 
-    // Saltar el primer '/'
-    char *token = strtok(path_copy, "/");
-    while (token != NULL) {
-        struct direntv6 entry;
-        int res = directory_findname(fs, token, curr_inumber, &entry);
-        if (res < 0) {
-            return -1; // No se encontró el componente
+    char temp_path[256];
+    strncpy(temp_path, pathname, sizeof(temp_path));
+    temp_path[sizeof(temp_path) - 1] = '\0';
+
+    char *component = strtok(temp_path, "/");
+    while (component != NULL) {
+        struct direntv6 match;
+        int status = directory_findname(fs, component, current_inode, &match);
+        if (status < 0) {
+            return -1; 
         }
-        curr_inumber = entry.d_inumber;
-        token = strtok(NULL, "/");
+
+        current_inode = match.d_inumber;
+        component = strtok(NULL, "/");
     }
 
-    return curr_inumber;
+    return current_inode;
 }
