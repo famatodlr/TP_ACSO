@@ -7,52 +7,44 @@
 #include <assert.h>
 
 /**
- * Busca una entrada de directorio por su nombre.
- * Parametros:
- *    fs El sistema de archivos.
- *    name El nombre del archivo a buscar.
- *    dirinumber El número de inodo del directorio donde buscar.
- *    dirEnt Una estructura donde se almacenará la entrada encontrada.
- * 
- * Return:
- * 0 si se encuentra el archivo, -1 si no se encuentra.
+ * TODO
  */
 int directory_findname(struct unixfilesystem *fs, const char *name,
-    int dirinumber, struct direntv6 *dirEnt) {
-  
-    struct inode dirInode;
-    if (inode_iget(fs, dirinumber, &dirInode) != 0) {
-        fprintf(stderr, "Error: no se pudo obtener el inodo %d\n", dirinumber);
-        return -1;
-    }
-
-    int size = inode_getsize(&dirInode);
-    int numBlocks = size / 512;
-    if (size % 512 != 0) {
-        numBlocks++;
-    }
-
-    for (int blockNum = 0; blockNum < numBlocks; blockNum++) {
-        char buf[512];
-        if (file_getblock(fs, dirinumber, blockNum, buf) != 0) {
-            fprintf(stderr, "Error: no se pudo leer el bloque %d del directorio %d\n", blockNum, dirinumber);
-            return -1;
-        }
-
-        for (int i = 0; i < 512; i += sizeof(struct direntv6)) {
-            struct direntv6 *entry = (struct direntv6 *)(buf + i);
-
-            if (entry->d_inumber == 0) {
-                continue;
-            }
-
-            // Comparación robusta: no permite strings más largos que 14
-            if (strlen(name) <= 14 && strncmp(entry->d_name, name, 14) == 0) {
-                *dirEnt = *entry;
-                return 0;
-            }
-        }
-    }
-
+		int dirinumber, struct direntv6 *dirEnt) {
+  struct inode dir_inode;
+  if (inode_iget(fs, dirinumber, &dir_inode) < 0) {
     return -1;
+  }
+
+  if (!(dir_inode.i_mode & IALLOC) || ((dir_inode.i_mode & IFMT) != IFDIR)) {
+    // No es un directorio válido
+    return -1;
+  }
+
+  int dir_size = inode_getsize(&dir_inode);
+  int num_entries = dir_size / sizeof(struct direntv6);
+  int entries_per_block = DISKIMG_SECTOR_SIZE / sizeof(struct direntv6);
+
+  char buf[DISKIMG_SECTOR_SIZE];
+
+  int entry_index = 0;
+  for (int block = 0; ; block++) {
+    int bytes_read = file_getblock(fs, dirinumber, block, buf);
+    if (bytes_read <= 0) break;
+
+    int entries_in_block = bytes_read / sizeof(struct direntv6);
+    struct direntv6 *entries = (struct direntv6 *)buf;
+
+    for (int i = 0; i < entries_in_block && entry_index < num_entries; i++, entry_index++) {
+      if (entries[i].d_inumber == 0)
+        continue; // Entrada vacía
+
+      // Comparar nombre (asegura terminación nula)
+      if (strncmp(entries[i].d_name, name, sizeof(entries[i].d_name)) == 0) {
+        *dirEnt = entries[i];
+        return 0;
+      }
+    }
+  }
+  return -1;
 }
