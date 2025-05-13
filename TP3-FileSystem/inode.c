@@ -6,33 +6,29 @@
 
 
 /**
- * Carga un inodo desde el disco.
+ * TODO
  */
 int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
-    if (inumber < 1) {
-        return -1;   // inodo invalido
-    }
+    if (inumber < 1) return -1;
 
     int inodes_per_block = DISKIMG_SECTOR_SIZE / sizeof(struct inode);
-    int inode_block = INODE_START_SECTOR + (inumber - 1) / inodes_per_block;
-    int offset = (inumber - 1) % (512 / sizeof(struct inode));
+    int inode_block = (inumber - 1) / inodes_per_block + INODE_START_SECTOR;
+    int inode_offset = (inumber - 1) % inodes_per_block;
 
     struct inode buf[inodes_per_block];
-
-    if (diskimg_readsector(fs->dfd, inode_block, buf) != DISKIMG_SECTOR_SIZE) {
-        return -1;  // Error al leer el inodo
+    int res = diskimg_readsector(fs->dfd, inode_block, buf);
+    if (res != DISKIMG_SECTOR_SIZE) {
+        return -1;
     }
 
-    *inp = buf[offset];
-
+    *inp = buf[inode_offset];
     return 0;
 }
 
 /**
- * Busca un bloque de datos dentro de un inodo, teniendo en cuenta la posibilidad
- * de que sea un archivo grande con bloques indirectos o doblemente indirectos.
+ * TODO
  */
-int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
+ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
     if (!(inp->i_mode & IALLOC)) return -1;
     if (blockNum < 0) return -1;
 
@@ -93,5 +89,5 @@ int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum
 }
 
 int inode_getsize(struct inode *inp) {
-  return ((inp->i_size0 << 16) | inp->i_size1);
+  return ((inp->i_size0 << 16) | inp->i_size1); 
 }
